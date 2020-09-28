@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<head>
+<title>tic tac toe</title>
+<style type="text/css">
+  table{border-collapse: collapse;}
+  td {height:120px; width: 120px; border:1px solid #888;}
+  input {width: 100%; height: 100%;font-size:60px;text-align:center;}
+</style>
+</head>
+<body/>
+</html>
+<script>
+
+(function() { 
+  const squareSize = 3;
+  const columnNamePrefix = "col";
+  const rowNamePrefix = "row";
+  let winningLetter;
+
+  function drawTable(tableEl) {
+    for (i=0; i<squareSize; i++) { //rows
+      let tr = document.createElement("tr");
+
+      for (j=0; j<squareSize; j++) { //columns
+        let input = document.createElement("input");
+        input.className = columnNamePrefix+j + " " + rowNamePrefix+i;
+        let td = document.createElement("td");
+        td.appendChild(input);
+        tr.appendChild(td);
+      }
+      tableEl.appendChild(tr);
+    }
+    document.body.appendChild(tableEl);
+  }
+
+  drawTable(document.createElement("table"));
+
+  const inputs = document.getElementsByTagName("input")
+  const downhillCoords = calcDiagonalCoords('down');
+  const uphillCoords = calcDiagonalCoords('up');
+
+  for (i=0; i < inputs.length; i++){
+    inputs[i].addEventListener('input', 
+      function(e) {
+        if (
+          isLineWon(columnNamePrefix) || 
+          isLineWon(rowNamePrefix) ||
+          isCoordsWon(downhillCoords) || 
+          isCoordsWon(uphillCoords)
+        ) console.log("won with letter: " + winningLetter);
+      }
+    )
+  }
+
+
+function isCoordsWon(CoordsArr){
+  let valsArr = [];
+  for(i=0; i<CoordsArr.length; i++){
+    let fetchedInputArr = document.getElementsByClassName(
+      'col' + CoordsArr[i][0]+ ' ' +'row'+CoordsArr[i][1]
+    );
+    let val = fetchedInputArr[0].value;
+    if (val) valsArr.push(val);
+  }
+  let valSet = new Set(valsArr);
+  if(valsArr.length===squareSize && valSet.size===1){
+    winningLetter = valsArr[0];
+    return true;
+  }
+}
+
+function calcDiagonalCoords(hillDirection){
+  let coords = [];
+  let lastCol = squareSize-1;
+  for(i=0; i <= lastCol; i++){
+    if (hillDirection==='down')
+      coords.push([i, i]);
+    else 
+      coords.push([i, lastCol-i]);
+  }
+  return coords;
+}
+
+
+function isLineWon(lineTypePrefix) {
+  for(let i=0; i<squareSize; i++)
+  { 
+    let lineVals = []
+    let lineEls= document.getElementsByClassName(lineTypePrefix+i)
+
+    for(let j=0, inputCell; inputCell = lineEls[j]; j++){
+      let val = inputCell.value;
+      if (val) lineVals.push(val);
+    }
+    let lineSet = new Set(lineVals);
+    if(lineVals.length===squareSize && lineSet.size===1){
+      winningLetter = lineVals[0];
+      return true;
+    }
+  }
+  return false;
+}
+
+  
+})();
+
+</script>
