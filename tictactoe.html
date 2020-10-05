@@ -5,6 +5,30 @@
   table{border-collapse: collapse;}
   td {height:120px; width: 120px; border:1px solid #888;}
   input {width: 100%; height: 100%;font-size:60px;text-align:center;}
+  div.announcement {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    padding: 10px;
+    top: 132px;
+    left: 50px;
+    background-color: thistle;
+    border-radius: 12px;
+  }
+  div.announcement h3{
+    color: navy;
+    font-family: monospace, sans-serif;
+    font-size: 40px;
+    margin-top: 0;
+    margin-bottom: 3px;
+    font-weight: 500;
+  }
+  button.dismiss {
+    display: block;
+    margin-left: 40%;
+    font-size: 20px;
+    padding: 10px;
+  }
 </style>
 </head>
 <body/>
@@ -13,12 +37,13 @@
 
 (function() { 
   const squareSize = 3;
+  const totalInputs = Math.pow(squareSize,2);
   const columnNamePrefix = "col";
   const rowNamePrefix = "row";
   let winningLetter;
 
-  function drawTable(tableEl) {
-    for (i=0; i<squareSize; i++) { //rows
+  function drawTable(tableEl) { 
+    for (i=0; i<squareSize; i++) { // On^2 rows
       let tr = document.createElement("tr");
 
       for (j=0; j<squareSize; j++) { //columns
@@ -33,75 +58,169 @@
     document.body.appendChild(tableEl);
   }
 
-  drawTable(document.createElement("table"));
+  // establish input num to coordinate (row-column) relationship
+  // e.g. 0: 0-0, 1: 0-1, 2: 0-2...etc.
+  // in string 'rownum-colnum' format for easier reverse lookup
+  let allCoords = setCoords(squareSize);
+  const downhillBoxes = getBoxes(getDiagonalCoords('down'));
+  const uphillBoxes = getBoxes(getDiagonalCoords('up'));
+  const inputs = document.getElementsByTagName("input");
+  createWonDiv();
+  const wonDiv = document.getElementsByClassName("announcement")[0];
+  setTable();
 
-  const inputs = document.getElementsByTagName("input")
-  const downhillCoords = calcDiagonalCoords('down');
-  const uphillCoords = calcDiagonalCoords('up');
-
-  for (i=0; i < inputs.length; i++){
-    inputs[i].addEventListener('input', 
+  for (let i=0, input; input = inputs[i]; i++){
+    input.addEventListener('input', 
       function(e) {
-        if (
-          isLineWon(columnNamePrefix) || 
-          isLineWon(rowNamePrefix) ||
-          isCoordsWon(downhillCoords) || 
-          isCoordsWon(uphillCoords)
-        ) console.log("won with letter: " + winningLetter);
+        if (checkMyLines(e.target.className) ||
+            checkMyDiagonals(e.target.className)
+        ) {
+          wonDiv.style.display = "block";
+          document.getElementsByTagName("h3")[0].innerText = `Team ${winningLetter} Won!`;
+        }
       }
     )
   }
 
 
-function isCoordsWon(CoordsArr){
-  let valsArr = [];
-  for(i=0; i<CoordsArr.length; i++){
-    let fetchedInputArr = document.getElementsByClassName(
-      'col' + CoordsArr[i][0]+ ' ' +'row'+CoordsArr[i][1]
-    );
-    let val = fetchedInputArr[0].value;
-    if (val) valsArr.push(val);
+function createWonDiv(){
+  let wonDiv = document.createElement("div");
+  wonDiv.className = "announcement";
+  let wonMsg = document.createElement("h3");
+  wonMsg.innerText = `Team Won!`
+  wonDiv.appendChild(wonMsg);
+  let dismissButton = document.createElement("button");
+  dismissButton.className = "dismiss";
+  dismissButton.textContent = "OK"
+  dismissButton.addEventListener("click", function(e){
+    // reset Game
+    for (let i=0, input; input = inputs[i]; i++){
+      input.value = null;
+    }
+    winningLetter = "";
+    // dismiss modal
+    e.target.parentElement.style.display = "none";
+
+  })
+  wonDiv.appendChild(dismissButton);
+  document.body.appendChild(wonDiv);
+}
+
+// build allCoords in format: [row, col]
+function setCoords(squareSize) {
+  let allCoords = [];
+  let row = -1; //start row at 0 post condition
+  for (let i=0; i < totalInputs; i++) {
+    if (i%squareSize === 0) row++;
+    col = i%squareSize; //remainder
+    allCoords.push( `${row}-${col}` );
   }
-  let valSet = new Set(valsArr);
-  if(valsArr.length===squareSize && valSet.size===1){
-    winningLetter = valsArr[0];
+  return allCoords;
+}
+
+function setTable() {
+  let tableEl = document.createElement("table");
+  let tds = []; //array <td>s together to append to single <tr>
+  let rowCounter = 0;
+  let lastColumn = squareSize-1;
+  for (let i=0; i < allCoords.length; i++) {
+    let row = allCoords[i].split("-")[0];
+    let col = allCoords[i].split("-")[1];
+    // console.log(`row: ${row} | col: ${col}`)
+    let td = document.createElement("td");
+    let input = document.createElement("input");
+    input.className = i; //attach array position to each input for easier value lookup
+    td.appendChild(input);
+    tds.push(td);
+
+    if ( parseInt(col) === lastColumn) {
+      let tr = document.createElement("tr"); 
+      for (let j=0; j < squareSize; j++){
+        tr.appendChild(tds[j]);
+      }
+      tableEl.appendChild(tr); //and add row to table
+      rowCounter++;
+      tds = [];
+    }
+  }
+  document.body.appendChild(tableEl);
+}
+
+function fetchInputValues(inputList) {
+  let vals=[];
+  for(let i = 0; i<inputList.length; i++ ) {
+    let inputNum = inputList[i];
+    let val = inputs[inputNum].value;
+    if(val) vals.push(val);
+  }
+  return vals;
+}
+
+function areValsAllSame(lineVals){
+  let lineSet = new Set(lineVals);
+  if(lineVals.length===squareSize && lineSet.size===1){
+    winningLetter = lineVals[0];
     return true;
-  }
-}
-
-function calcDiagonalCoords(hillDirection){
-  let coords = [];
-  let lastCol = squareSize-1;
-  for(i=0; i <= lastCol; i++){
-    if (hillDirection==='down')
-      coords.push([i, i]);
-    else 
-      coords.push([i, lastCol-i]);
-  }
-  return coords;
-}
-
-
-function isLineWon(lineTypePrefix) {
-  for(let i=0; i<squareSize; i++)
-  { 
-    let lineVals = []
-    let lineEls= document.getElementsByClassName(lineTypePrefix+i)
-
-    for(let j=0, inputCell; inputCell = lineEls[j]; j++){
-      let val = inputCell.value;
-      if (val) lineVals.push(val);
-    }
-    let lineSet = new Set(lineVals);
-    if(lineVals.length===squareSize && lineSet.size===1){
-      winningLetter = lineVals[0];
-      return true;
-    }
   }
   return false;
 }
 
+function checkMyLines(inputNum) {
+  // Only get values of entered input's row and column.
+  let coordsArr = allCoords[inputNum].split('-');
+  let row = coordsArr[0];
+  let col = coordsArr[1];
+  let horizontalBoxes = [];
+  let verticalBoxes = [];
+
+  // gather vertical and horizontal values
+  for (let num=0; num<squareSize; num++){
+    horizontalBoxes.push(allCoords.indexOf(`${row}-${num}`));
+    verticalBoxes.push(allCoords.indexOf(`${num}-${col}`));
+  }
+  let verticalVals = fetchInputValues(verticalBoxes);
+  let horizontalVals = fetchInputValues(horizontalBoxes);
+
+  return (areValsAllSame(verticalVals) || areValsAllSame(horizontalVals));
+
+}
+
+/* ---------- check diagonal values ------------- */
+function checkMyDiagonals(inputNum) {
+  let activeBox = parseInt(inputNum);
+  let hasDownhill = hasUphill = false;
+    if(downhillBoxes.includes(activeBox)){
+      hasDownhill = areValsAllSame(fetchInputValues(downhillBoxes))
+    }
+    if(uphillBoxes.includes(activeBox)){
+      hasUphill = areValsAllSame(fetchInputValues(uphillBoxes))
+    }
+  return (hasUphill || hasDownhill);
+}
+
+function getBoxes(coords){
+  let boxes = [];
+  for (let i=0; i < squareSize; i++) {
+    boxes.push(allCoords.indexOf(coords[i]));
+  }
+  return boxes;
+}
+
+// returns diagonal location e.g. 0-0, 1-1, 2-2
+function getDiagonalCoords(hillDirection){
+  let coords = [];
+  let lastCol = squareSize-1;
+  for (let i = 0; i <= lastCol; i++) {
+    if (hillDirection==='down')
+      coords.push(`${i}-${i}`);
+    else{ 
+      coords.push(`${i}-${lastCol-i}`);
+    }
+  }
+  return coords;
+}
   
 })();
+
 
 </script>
