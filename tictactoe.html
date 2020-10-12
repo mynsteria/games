@@ -2,25 +2,40 @@
 <head>
 <title>tic tac toe</title>
 <style type="text/css">
-  table{border-collapse: collapse;}
+  body {background-color: tan;}
+  h1 {
+    text-align:center;    
+    color: navy;
+    font-family: monospace, sans-serif;
+  }
+  table{
+    margin: 0 auto;
+    border-collapse: collapse;}
   td {height:120px; width: 120px; border:1px solid #888;}
   input {width: 100%; height: 100%;font-size:60px;text-align:center;}
-  div.announcement {
-    display: none;
-    position: absolute;
+  
+  div#announcementContainer {
+      display: none;
+      position: absolute; left: 50%; /* horizontally center container */
+    }
+  div#announcement {
+    position: relative;
     z-index: 10;
     padding: 10px;
-    top: 132px;
-    left: 50px;
+    border-width: 10px;
+    border-style: dotted;
+    border-color: lavender;
+    top: 114px;
+    left: -50%; /* horizontally center inner content */
     background-color: thistle;
     border-radius: 12px;
   }
-  div.announcement h3{
+  div#announcement h3{
     color: navy;
     font-family: monospace, sans-serif;
     font-size: 40px;
     margin-top: 0;
-    margin-bottom: 3px;
+    margin-bottom: 10px;
     font-weight: 500;
   }
   button.dismiss {
@@ -31,7 +46,9 @@
   }
 </style>
 </head>
-<body/>
+<body>
+  <h1>Tic Tac Toe</h1>  
+</body>
 </html>
 <script>
 
@@ -58,15 +75,19 @@
     document.body.appendChild(tableEl);
   }
 
-  // establish input num to coordinate (row-column) relationship
+  // create a map/establish input num to coordinate (row-column) relationship
   // e.g. 0: 0-0, 1: 0-1, 2: 0-2...etc.
   // in string 'rownum-colnum' format for easier reverse lookup
   let allCoords = setCoords(squareSize);
+  console.log(allCoords)
   const downhillBoxes = getBoxes(getDiagonalCoords('down'));
   const uphillBoxes = getBoxes(getDiagonalCoords('up'));
   const inputs = document.getElementsByTagName("input");
   createWonDiv();
-  const wonDiv = document.getElementsByClassName("announcement")[0];
+  const wonDivContainer = document.getElementById("announcementContainer");
+  const wonDiv = document.getElementById("announcement");
+  let marqueeTimerId; //
+
   setTable();
 
   for (let i=0, input; input = inputs[i]; i++){
@@ -75,17 +96,26 @@
         if (checkMyLines(e.target.className) ||
             checkMyDiagonals(e.target.className)
         ) {
-          wonDiv.style.display = "block";
+          wonDivContainer.style.display = "block";
           document.getElementsByTagName("h3")[0].innerText = `Team ${winningLetter} Won!`;
+          marqueeTimerId = setInterval(randomBorder, 380, wonDiv);
         }
       }
     )
   }
 
+function randomBorder(el) {
+  let rand1 = Math.floor(Math.random() * 255);
+  let rand2 = Math.floor(Math.random() * 255);
+  let rand3 = Math.floor(Math.random() * 255);
+  el.style.borderColor=`rgb(${rand1}, ${rand2}, ${rand3})`;
+}
 
 function createWonDiv(){
+  let wonDivContainer = document.createElement("div");
+  wonDivContainer.id = "announcementContainer";
   let wonDiv = document.createElement("div");
-  wonDiv.className = "announcement";
+  wonDiv.id = "announcement";
   let wonMsg = document.createElement("h3");
   wonMsg.innerText = `Team Won!`
   wonDiv.appendChild(wonMsg);
@@ -99,11 +129,12 @@ function createWonDiv(){
     }
     winningLetter = "";
     // dismiss modal
-    e.target.parentElement.style.display = "none";
-
+    e.target.parentElement.parentElement.style.display = "none";
+    clearInterval(marqueeTimerId);
   })
   wonDiv.appendChild(dismissButton);
-  document.body.appendChild(wonDiv);
+  wonDivContainer.appendChild(wonDiv);
+  document.body.appendChild(wonDivContainer);
 }
 
 // build allCoords in format: [row, col]
